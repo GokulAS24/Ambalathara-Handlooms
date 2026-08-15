@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Playfair_Display, Inter } from 'next/font/google';
+import { SplashScreen } from '@/components/layout/SplashScreen';
 import { MotionProvider } from '@/components/ui/MotionProvider';
 import { SITE_CONFIG } from '@/lib/constants';
 import './globals.css';
@@ -90,6 +91,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`${playfair.variable} ${playfairItalic.variable} ${inter.variable}`}
     >
       <body className="min-h-screen bg-cream font-sans text-charcoal antialiased">
+        <SplashScreen />
         <MotionProvider>{children}</MotionProvider>
       </body>
     </html>
