@@ -1,0 +1,245 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /**
+     * Sampled directly off public/ambalathara-logo.jpg, so the page ground
+     * and the artwork's photographed ground are the same cloth.
+     *
+     *   --cream-lit   #F2DFCC  behind the emblem, the brightest point
+     *   --cream       #ECD6BF  the general field
+     *   --cream-deep  #E4C7AA  upper corners
+     *   --cream-edge  #D4B99D  lower corners, the darkest of the vignette
+     *
+     * These replaced a near-white #FDFBF7. That white was the reason the
+     * logo read as a photograph pasted onto the layout — the artwork's
+     * ground is a full 24 points darker and considerably warmer.
+     */
+    --cream-lit: #f2dfcc;
+    --cream: #ecd6bf;
+    --cream-deep: #e4c7aa;
+    --cream-edge: #d4b99d;
+
+    --maroon: #6b1724;
+    --gold: #c5a059;
+    --charcoal: #2e2a26;
+
+    /**
+     * ─────────────────────────────────────────────────────────────
+     *  FLUID LAYOUT TOKENS
+     * ─────────────────────────────────────────────────────────────
+     *  The whole page is designed to fit one screen — no scrolling, on
+     *  anything from a landscape phone to a 4K monitor. Every size below
+     *  is `clamp(floor, preferred-in-vh, ceiling)`: the preferred value
+     *  scales with viewport HEIGHT (not width), because height is the
+     *  scarce axis here. The floor keeps things legible on tall-but-narrow
+     *  phones; the ceiling stops the page turning into a giant poster on
+     *  an ultrawide monitor.
+     *
+     *  These are a budget, tuned so the sum of every section, at exactly
+     *  100vh, lands just under the viewport — see ViewportFit for the
+     *  belt-and-suspenders that catches whatever this budget misses (an
+     *  unusual font fallback, OS text-size boosting, extreme aspect
+     *  ratios) and scales the page down as a last resort, rather than
+     *  letting it scroll or clip.
+     */
+    --space-page-y: clamp(0.4rem, 1.6vh, 1.1rem);
+    --space-page-x: clamp(0.75rem, 3vw, 2rem);
+    --space-stack: clamp(0.4rem, 1.3vh, 1.1rem);
+    --space-stack-lg: clamp(0.6rem, 2vh, 1.6rem);
+
+    /**
+     * The hero mark's width — now the hero's only content besides the
+     * eyebrow line and a divider, so it gets the vertical budget the
+     * tagline/subcopy/craft-pillars strip used to take. The brand video is
+     * 16:9 and lives inside a box sized by this one token (height follows
+     * automatically at `aspect-video` — see DrapedLogo); the static-JPG
+     * fallback reuses it too, just at `aspect-square` instead.
+     *
+     * The coefficient below isn't a like-for-like swap with the removed
+     * copy's own vh budget: this token sets *width*, and height (what
+     * actually fills vertical space) trails at width × 9/16. Reclaiming
+     * ~13vh of freed height therefore takes roughly 13 ÷ 0.5625 ≈ 23vh of
+     * *width* coefficient — which is why this jumped from 58vh to 84vh,
+     * not to ~71vh.
+     *
+     * `min(90vw, 84vh)` caps growth by *both* axes: 84vh alone would
+     * overflow a narrow-but-tall phone (a 16:9 box that tall is wider than
+     * most phones are), and 90vw alone would balloon on a short, wide
+     * viewport where height is actually the scarce resource.
+     */
+    --logo-size: clamp(15rem, min(90vw, 84vh), 64rem);
+
+    --text-eyebrow: clamp(0.44rem, 1.1vh, 0.66rem);
+    --text-tagline: clamp(0.8rem, 2vh, 1.25rem);
+    --text-subcopy: clamp(0.56rem, 1.3vh, 0.9rem);
+    --text-launch-label: clamp(0.48rem, 1.05vh, 0.7rem);
+    --text-card-digit: clamp(1.05rem, 4.4vh, 3rem);
+    --text-card-label: clamp(0.38rem, 0.85vh, 0.62rem);
+    --text-notify-heading: clamp(0.82rem, 1.85vh, 1.25rem);
+    --text-notify-sub: clamp(0.54rem, 1.1vh, 0.75rem);
+    --text-control: clamp(0.6rem, 1.25vh, 0.875rem);
+    --text-footer-copy: clamp(0.42rem, 0.9vh, 0.62rem);
+
+    --card-py: clamp(0.3rem, 1.3vh, 1.5rem);
+    --card-px: clamp(0.5rem, 1.6vw, 1.5rem);
+    --card-gap: clamp(0.35rem, 1.2vh, 1rem);
+    --control-h: clamp(1.9rem, 4.8vh, 3rem);
+    --control-h-sm: clamp(1.7rem, 4.1vh, 2.6rem);
+    --text-control-sm: clamp(0.56rem, 1.1vh, 0.8rem);
+    --control-gap: clamp(0.35rem, 1vh, 0.75rem);
+    --icon-size: clamp(1.7rem, 3.6vh, 2.25rem);
+    --space-status-reserve: clamp(0.85rem, 2.1vh, 1.6rem);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+    /* Dynamic units (dvh) already track mobile browser chrome; a fixed
+       100% height keeps html/body from ever growing past that. */
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    background-color: var(--cream);
+    color: var(--charcoal);
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    height: 100%;
+    /* The page is fit to the viewport by design (fluid tokens above) and
+       by ViewportFit as a fallback — this is a backstop against rubber-band
+       bounce and stray sub-pixel overflow, not the fitting mechanism
+       itself, so it never clips content that hasn't already been sized
+       to fit. */
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  ::selection {
+    background-color: rgba(197, 160, 89, 0.3);
+    color: var(--maroon);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+}
+
+@layer components {
+  /**
+   * The artwork's vignette, rebuilt as gradients.
+   *
+   * In the photograph the light sits high and centred — brightest just
+   * behind the emblem at roughly 50% / 18% — and falls away to tan at the
+   * corners, the lower two darker than the upper two.
+   *
+   * This is CSS rather than part of the ClothGround canvas because it has
+   * to be correct on the very first paint; the canvas only layers the
+   * mosaic and grain on top once it mounts.
+   */
+  .cotton-glow {
+    background-color: var(--cream);
+    background-image:
+      radial-gradient(ellipse 78% 62% at 50% 18%, var(--cream-lit), transparent 68%),
+      linear-gradient(180deg, transparent 45%, rgba(196, 160, 124, 0.22) 100%),
+      radial-gradient(
+        ellipse 118% 96% at 50% 42%,
+        transparent 52%,
+        var(--cream-deep) 82%,
+        var(--cream-edge) 100%
+      );
+  }
+
+  /* Zari foil: gold gradient clipped to the glyphs. */
+  .text-zari {
+    background-image: linear-gradient(
+      100deg,
+      #9c7b3b 0%,
+      #c5a059 22%,
+      #f3e3bd 45%,
+      #c5a059 62%,
+      #9c7b3b 100%
+    );
+    background-size: 220% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: zari-sheen 9s ease-in-out infinite;
+  }
+
+  @keyframes zari-sheen {
+    0%,
+    100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+  }
+
+  /**
+   * Countdown card face — a swatch of the saree's own cloth with a gold
+   * hairline. Keyed off the drape in the artwork rather than off white:
+   * white cards floated above the blush ground like paper on cloth.
+   */
+  .card-handloom {
+    background-image: linear-gradient(
+      160deg,
+      rgba(250, 240, 224, 0.94) 0%,
+      rgba(244, 231, 210, 0.86) 55%,
+      rgba(232, 212, 184, 0.72) 100%
+    );
+    border: 1px solid rgba(197, 160, 89, 0.45);
+    backdrop-filter: blur(2px);
+  }
+
+  /* Double rule with a gap, the way a kasavu border is set off the hem. */
+  .zari-rule {
+    background-image: linear-gradient(
+      to right,
+      transparent,
+      rgba(197, 160, 89, 0.15) 12%,
+      rgba(197, 160, 89, 0.85) 50%,
+      rgba(197, 160, 89, 0.15) 88%,
+      transparent
+    );
+  }
+}
+
+@layer utilities {
+  .tracking-zari {
+    letter-spacing: 0.4em;
+  }
+
+  /* Sits behind the countdown digits so the tick reads as a light sweep. */
+  .sheen-mask {
+    -webkit-mask-image: linear-gradient(to bottom, transparent, #000 22%, #000 78%, transparent);
+    mask-image: linear-gradient(to bottom, transparent, #000 22%, #000 78%, transparent);
+  }
+
+  .digit-tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+  }
+}
+
+/**
+ * Global stillness switch. Framer Motion loops are gated in JS via
+ * usePrefersReducedMotion; this catches the pure-CSS decorations.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
