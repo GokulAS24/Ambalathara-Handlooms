@@ -157,6 +157,24 @@
     overscroll-behavior: none;
   }
 
+  /**
+   * `<main>` is pinned to the viewport with Tailwind's `h-dvh` utility
+   * (`height: 100dvh`, page.tsx), which has no built-in fallback — browsers
+   * that predate the `dvh` unit (pre-2022 engines: Safari <15.4, Chrome/Edge
+   * <108, Firefox <101, and any dated in-app WebView still on one of those)
+   * treat `height: 100dvh` as invalid and drop it, leaving `<main>` with no
+   * explicit height at all. Since `html`/`body` above are `overflow: hidden`
+   * by design, content taller than the real viewport would then be silently
+   * clipped off the bottom with no way to scroll to it — exactly the
+   * failure the fluid layout exists to avoid. This is lower-specificity
+   * than `.h-dvh` (an element selector vs. a class), so it's a no-op on any
+   * browser that understands `dvh` and only engages as a fallback where
+   * that declaration was dropped.
+   */
+  main {
+    height: 100vh;
+  }
+
   ::selection {
     background-color: rgba(197, 160, 89, 0.3);
     color: var(--maroon);
