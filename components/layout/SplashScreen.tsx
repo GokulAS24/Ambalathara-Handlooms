@@ -56,12 +56,20 @@ export function SplashScreen() {
     <div
       aria-hidden="true"
       className={cn(
-        'cotton-glow fixed inset-0 z-[100] flex flex-col items-center justify-center gap-4',
+        'cotton-glow fixed inset-0 z-[100] flex flex-col items-center justify-center gap-4 px-6',
         'transition-opacity duration-300 ease-out',
         stage === 'fade' ? 'pointer-events-none opacity-0' : 'opacity-100'
       )}
     >
-      <p className="text-zari font-serif text-[clamp(1.5rem,5vh,2.75rem)] uppercase tracking-zari">
+      {/*
+        Sized off `min(vw, vh)`, not `vh` alone: this is a single unbroken
+        word (no spaces for normal wrapping to break at), so width — the
+        scarce axis on a narrow phone — has to bound the font size directly
+        or the wide `tracking` blows past the viewport edge and gets
+        clipped by `overflow: hidden` rather than wrapping. `max-w` +
+        `break-words` is the last-resort net if it ever still doesn't fit.
+      */}
+      <p className="max-w-[92vw] break-words text-center font-serif text-[clamp(1.1rem,min(7vw,6vh),2.75rem)] uppercase tracking-[0.18em] text-zari">
         {SITE_CONFIG.shortName}
       </p>
       <OrnamentalDivider className="max-w-[16rem]" />
