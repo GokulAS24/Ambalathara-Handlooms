@@ -32,8 +32,15 @@ import { cn } from '@/lib/utils';
  * y[13.9%, 85.0%] — center (50.0%, 49.4%), half-extent (25.9%, 35.6%).
  * EDGE_FEATHER's opaque radius clears that half-extent with a margin at
  * every stop; re-measure both if the source composition ever changes.
+ *
+ * The horizontal radius and stop come from `--logo-feather-rx` /
+ * `--logo-feather-stop` (globals.css) so they can swap for the 4:3 mobile
+ * crop — vertical numbers stay literal since object-cover never crops
+ * height when only the box's width fraction narrows. See the media query
+ * next to `--logo-aspect` in globals.css for that derivation.
  */
-const EDGE_FEATHER = 'radial-gradient(ellipse 42% 49% at 50% 49.4%, #000 70%, transparent 100%)';
+const EDGE_FEATHER =
+  'radial-gradient(ellipse var(--logo-feather-rx) 49% at 50% 49.4%, #000 var(--logo-feather-stop), transparent 100%)';
 
 const SIZES = '(min-height: 800px) 44rem, 76vw';
 
@@ -71,13 +78,10 @@ export function DrapedLogo({ className }: { className?: string }) {
 
   return (
     <div
-      className={cn(
-        'relative mx-auto select-none',
-        videoFailed ? 'aspect-square' : 'aspect-video',
-        className
-      )}
+      className={cn('relative mx-auto select-none', className)}
       style={{
         width: 'var(--logo-size)',
+        aspectRatio: videoFailed ? '1 / 1' : 'var(--logo-aspect)',
         WebkitMaskImage: EDGE_FEATHER,
         maskImage: EDGE_FEATHER,
       }}
