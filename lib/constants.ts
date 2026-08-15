@@ -68,7 +68,7 @@ export const SITE_CONFIG: SiteConfig = {
   tagline: 'Threads of Tradition, Woven with Soul',
   description:
     'Ambalathara Handlooms — pure handcrafted kasavu, cotton and silk handlooms woven on traditional pit looms. Our doors open soon.',
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ambalatharahandloons.com',
+  url: process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ambalatharahandlooms.com',
   locale: 'en_IN',
   established: 'Est. Kerala, India',
   contactEmail: 'weave@ambalatharahandloons.com',
@@ -127,9 +127,18 @@ export const WHATSAPP_URL = WHATSAPP_NUMBER
   ? `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE)}`
   : '';
 
+/**
+ * Set NEXT_PUBLIC_INSTAGRAM_URL in .env.local to the real profile URL.
+ * Left unset, the icon simply does not render — same reasoning as
+ * WHATSAPP_URL above: better no icon than one linking to a dead page.
+ */
+const INSTAGRAM_URL = process.env.NEXT_PUBLIC_INSTAGRAM_URL ?? '';
+
 /** Placeholder handles — swap for the real accounts before launch. */
 export const SOCIAL_LINKS: SocialLink[] = [
-  { label: 'Instagram', href: 'https://instagram.com', icon: 'instagram' },
+  ...(INSTAGRAM_URL
+    ? [{ label: 'Instagram', href: INSTAGRAM_URL, icon: 'instagram' as const }]
+    : []),
   { label: 'Facebook', href: 'https://facebook.com', icon: 'facebook' },
   { label: 'Email', href: 'mailto:weave@ambalatharahandloons.com', icon: 'mail' },
 ];
