@@ -32,7 +32,7 @@ export function ProductsSection() {
         </div>
 
         {loading ? (
-          <p className="mt-14 text-center font-sans text-sm text-earth">Loading collection…</p>
+          <ProductGridSkeleton />
         ) : error ? (
           <div className="mt-14 text-center">
             <p className="font-sans text-sm text-maroon">{error}</p>
@@ -61,6 +61,43 @@ export function ProductsSection() {
         )}
       </div>
     </section>
+  );
+}
+
+/**
+ * Stands in the exact shape of the real grid below (same columns/gaps) so
+ * there's no layout jump once products arrive — a shimmering placeholder
+ * card, not a spinner or bare text, in keeping with the catalogue's own
+ * "zari sheen" motif (the same sweep CountdownTimer uses). Card count and
+ * heights are illustrative, not meaningful, so they're aria-hidden with a
+ * single accessible "loading" announcement instead.
+ */
+function ProductGridSkeleton() {
+  return (
+    <div
+      className="mt-14 grid grid-cols-2 gap-5 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4"
+      role="status"
+      aria-label="Loading collection"
+    >
+      {Array.from({ length: 8 }).map((_, i) => (
+        <div
+          key={i}
+          aria-hidden="true"
+          className="card-handloom flex flex-col overflow-hidden rounded-sm shadow-zari"
+        >
+          <div className="relative aspect-[4/5] w-full overflow-hidden bg-cream-300">
+            <span
+              className="absolute inset-y-0 -left-1/2 w-1/2 bg-zari-sweep opacity-60 animate-zari-shimmer"
+              style={{ animationDelay: `${(i % 4) * 0.35}s` }}
+            />
+          </div>
+          <div className="flex flex-col items-center gap-2 p-4">
+            <span className="h-3 w-2/3 rounded-full bg-cream-300" />
+            <span className="h-3 w-1/3 rounded-full bg-cream-300" />
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 
