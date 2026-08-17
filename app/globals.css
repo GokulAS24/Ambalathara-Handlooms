@@ -159,20 +159,61 @@
 
   /**
    * `<main>` is pinned to the viewport with Tailwind's `h-dvh` utility
-   * (`height: 100dvh`, page.tsx), which has no built-in fallback — browsers
-   * that predate the `dvh` unit (pre-2022 engines: Safari <15.4, Chrome/Edge
-   * <108, Firefox <101, and any dated in-app WebView still on one of those)
-   * treat `height: 100dvh` as invalid and drop it, leaving `<main>` with no
-   * explicit height at all. Since `html`/`body` above are `overflow: hidden`
-   * by design, content taller than the real viewport would then be silently
-   * clipped off the bottom with no way to scroll to it — exactly the
-   * failure the fluid layout exists to avoid. This is lower-specificity
-   * than `.h-dvh` (an element selector vs. a class), so it's a no-op on any
-   * browser that understands `dvh` and only engages as a fallback where
-   * that declaration was dropped.
+   * (`height: 100dvh`, CountdownLanding.tsx), which has no built-in
+   * fallback — browsers that predate the `dvh` unit (pre-2022 engines:
+   * Safari <15.4, Chrome/Edge <108, Firefox <101, and any dated in-app
+   * WebView still on one of those) treat `height: 100dvh` as invalid and
+   * drop it, leaving `<main>` with no explicit height at all. Since
+   * `html`/`body` above are `overflow: hidden` by design, content taller
+   * than the real viewport would then be silently clipped off the bottom
+   * with no way to scroll to it — exactly the failure the fluid layout
+   * exists to avoid. This is lower-specificity than `.h-dvh` (an element
+   * selector vs. a class), so it's a no-op on any browser that understands
+   * `dvh` and only engages as a fallback where that declaration was
+   * dropped. (MainSite's own `<main>` resets this back to `auto` — see
+   * `.site-launched` below.)
    */
   main {
     height: 100vh;
+  }
+
+  /**
+   * Toggled on <html> by LaunchGate the instant the countdown completes
+   * and MainSite takes over. The rules above depend on html/body being
+   * overflow:hidden so the countdown's one-viewport layout can never
+   * scroll; MainSite is a normal multi-section page and needs real
+   * document scroll. Scoped to this class rather than editing the rules
+   * above, so the countdown phase's own behaviour is provably untouched.
+   */
+  html.site-launched {
+    height: auto;
+    overflow: visible;
+  }
+
+  html.site-launched body {
+    height: auto;
+    overflow: visible;
+    overscroll-behavior: auto;
+  }
+
+  html.site-launched main {
+    height: auto;
+  }
+
+  /**
+   * /admin never mounts LaunchGate (it's a separate route from the
+   * countdown/main-site swap), so `.site-launched` above never gets
+   * applied there — it was inheriting the *countdown* page's
+   * overflow:hidden with no way to turn it off, on a page with far more
+   * content than one viewport (product list + form + export panel + a
+   * full embedded site preview). Same fix, same reasoning, different
+   * trigger: AdminApp sets this class on mount instead of LaunchGate.
+   */
+  html.admin-page,
+  html.admin-page body {
+    height: auto;
+    overflow: visible;
+    overscroll-behavior: auto;
   }
 
   ::selection {

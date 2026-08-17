@@ -1,73 +1,29 @@
 import { BackgroundPatterns } from '@/components/landing/BackgroundPatterns';
-import { CountdownTimer } from '@/components/landing/CountdownTimer';
-import { Footer } from '@/components/landing/Footer';
-import { Hero } from '@/components/landing/Hero';
-import { OrnamentalDivider } from '@/components/landing/OrnamentalDivider';
 import { WhatsAppButton } from '@/components/landing/WhatsAppButton';
-import { ViewportFit } from '@/components/layout/ViewportFit';
+import { LaunchGate } from '@/components/layout/LaunchGate';
 import { LAUNCH_DATE_ISO, SITE_CONFIG } from '@/lib/constants';
 
 /**
- * Server component. Only the pieces that genuinely need the browser —
- * background motion, the clock, the hero's entrance, the form, and the
- * viewport-fit measurement — are client components; the divider and the
- * footer ship as HTML with no JavaScript attached.
- *
- * The whole page is one screen, on purpose: `h-dvh` pins `<main>` to
- * exactly the visible viewport (the dynamic unit tracks mobile browser
- * chrome showing and hiding), every section inside uses the fluid
- * `clamp()` tokens from globals.css instead of fixed spacing, and
- * ViewportFit scales the whole stack down as a last resort on whatever
- * that budget doesn't cover. Nothing scrolls, on any of them.
+ * Server component. `LaunchGate` (client) picks between the pre-launch
+ * countdown page and the full main site the instant the countdown
+ * completes — see components/layout/LaunchGate.tsx. Everything here stays
+ * a sibling of it, not nested inside, because both apply regardless of
+ * which mode is showing.
  */
 export default function HomePage() {
   return (
     <>
       <BackgroundPatterns />
 
-      <main className="relative flex h-dvh w-full flex-col overflow-hidden px-[var(--space-page-x)] py-[var(--space-page-y)]">
-        <ViewportFit>
-          <div className="mx-auto flex w-full max-w-4xl flex-col items-center gap-[var(--space-stack-lg)]">
-            <Hero />
-
-            {/* Countdown */}
-            <section aria-labelledby="countdown-heading" className="w-full">
-              <h2
-                id="countdown-heading"
-                className="mb-[var(--space-stack)] text-center font-sans text-[length:var(--text-eyebrow)] uppercase tracking-zari text-gold-dark"
-              >
-                Weaving Our Doors Open In
-              </h2>
-              <CountdownTimer />
-            </section>
-
-            <OrnamentalDivider className="max-w-2xl opacity-80" />
-
-            {/*
-              PARKED — the email capture. WhatsApp is the contact route for
-              now, via the floating button below.
-
-              Only this call site is commented out. `NotifyForm`, its
-              `/api/subscribe` route, `lib/subscribers.ts` and NOTIFY_COPY
-              are all untouched and still build, so restoring the section is
-              deleting these two lines.
-
-              <div className="flex w-full flex-col items-center">
-                <NotifyForm />
-              </div>
-            */}
-
-            <Footer />
-          </div>
-        </ViewportFit>
-      </main>
+      <LaunchGate />
 
       {/*
-        Outside <main>, and so outside ViewportFit: that component applies
-        `transform: scale()` when it shrinks the page, and a transformed
-        ancestor becomes the containing block for `position: fixed`
-        children. Nested inside, this would scale with the content and pin
-        to the corner of the scaled box rather than the viewport.
+        Outside LaunchGate's countdown-mode <main>, and so outside
+        ViewportFit: that component applies `transform: scale()` when it
+        shrinks the page, and a transformed ancestor becomes the containing
+        block for `position: fixed` children. Nested inside, this would
+        scale with the content and pin to the corner of the scaled box
+        rather than the viewport.
       */}
       <WhatsAppButton />
 

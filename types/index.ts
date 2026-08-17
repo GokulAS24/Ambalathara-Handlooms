@@ -65,16 +65,43 @@ export interface SubscribeResponse {
 
 export type SubmitStatus = 'idle' | 'loading' | 'success' | 'error';
 
-/* ── Reserved for the commerce phase ───────────────────────── */
+/* ── Product catalog (components/site, components/admin) ───── */
+
+export type ProductStatus = 'ACTIVE' | 'INACTIVE';
+
+export interface ProductSpec {
+  label: string;
+  value: string;
+}
+
+/**
+ * One priced, orderable image within a product — e.g. a colourway or
+ * finish, each with its own price. Price lives here, never on `Product`
+ * itself: a product with no items has nothing to sell yet.
+ */
+export interface ProductItem {
+  id: string;
+  /** Path under /public, or empty for the fabric-tinted placeholder swatch. */
+  image: string;
+  price: number;
+  displayOrder: number;
+  status: ProductStatus;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface Product {
   id: string;
-  slug: string;
   name: string;
   description: string;
-  price: number;
+  status: ProductStatus;
+  displayOrder: number;
+  createdAt: string;
+  updatedAt: string;
   currency: 'INR';
-  images: string[];
   fabric: 'cotton' | 'silk' | 'kasavu' | 'linen';
-  inStock: boolean;
+  specifications: ProductSpec[];
+  availability: string;
+  delivery: string;
+  items: ProductItem[];
 }

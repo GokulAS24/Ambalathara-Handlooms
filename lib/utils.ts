@@ -24,3 +24,34 @@ export function isValidEmail(email: string): boolean {
 export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
+
+const PRICE_FORMATTER = new Intl.NumberFormat('en-IN', {
+  style: 'currency',
+  currency: 'INR',
+  maximumFractionDigits: 0,
+});
+
+/** e.g. 4999 -> "₹4,999". */
+export function formatPrice(price: number): string {
+  return PRICE_FORMATTER.format(price);
+}
+
+/** e.g. "Kasavu Signature Saree" -> "kasavu-signature-saree". Used to seed new product ids. */
+export function slugify(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+/**
+ * A unique id for a new product item — there's no database to assign one,
+ * so the admin portal generates its own. `crypto.randomUUID` is available
+ * in every browser this project targets; the timestamp+random fallback
+ * only matters for an unusual embedder without it.
+ */
+export function generateId(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+  return `id-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
