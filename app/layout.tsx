@@ -62,11 +62,13 @@ export const metadata: Metadata = {
     siteName: SITE_CONFIG.name,
     title: `${SITE_CONFIG.name} — ${SITE_CONFIG.tagline}`,
     description: SITE_CONFIG.description,
+    images: [{ url: '/ambalathara-logo.jpg', width: 1200, height: 1200, alt: SITE_CONFIG.name }],
   },
   twitter: {
     card: 'summary_large_image',
     title: `${SITE_CONFIG.name} — ${SITE_CONFIG.tagline}`,
     description: SITE_CONFIG.description,
+    images: ['/ambalathara-logo.jpg'],
   },
   robots: {
     index: true,

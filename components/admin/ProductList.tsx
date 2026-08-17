@@ -10,10 +10,9 @@ import type { Product } from '@/types';
 type SortMode = 'order' | 'name' | 'status';
 const PAGE_SIZE = 8;
 
-/** Lowest price across a product's items — what the list shows, since there's no single product-level price. */
-function fromPrice(product: Product): number | null {
-  const prices = product.items.map((item) => item.price);
-  return prices.length ? Math.min(...prices) : null;
+/** The product's cover image — its primary item, falling back to the first if none is marked. */
+function coverImage(product: Product): string | undefined {
+  return (product.items.find((item) => item.isPrimary) ?? product.items[0])?.image;
 }
 
 export function ProductList({
@@ -121,7 +120,7 @@ export function ProductList({
       ) : (
         <ul className="flex flex-col gap-3">
           {paged.map((product, index) => {
-            const price = fromPrice(product);
+            const cover = coverImage(product);
             return (
               <li
                 key={product.id}
@@ -144,9 +143,9 @@ export function ProductList({
                 )}
 
                 <div className="h-14 w-14 shrink-0 overflow-hidden rounded-sm">
-                  {product.items[0]?.image ? (
+                  {cover ? (
                     // eslint-disable-next-line @next/next/no-img-element -- admin thumbnail of an arbitrary uploaded/pasted image
-                    <img src={product.items[0].image} alt="" className="h-full w-full object-cover" />
+                    <img src={cover} alt="" className="h-full w-full object-cover" />
                   ) : (
                     <ProductSwatch fabric={product.fabric} className="aspect-square h-full w-full" />
                   )}
@@ -160,8 +159,8 @@ export function ProductList({
                     </p>
                   ) : (
                     <p className="font-sans text-xs text-earth">
-                      {price !== null ? `from ${formatPrice(price)}` : 'no images yet'} · {product.fabric} ·{' '}
-                      {product.items.length} image{product.items.length === 1 ? '' : 's'}
+                      {formatPrice(product.price)} · {product.fabric} · {product.items.length} image
+                      {product.items.length === 1 ? '' : 's'}
                     </p>
                   )}
                 </div>

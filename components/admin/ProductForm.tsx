@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { ProductItemEditor } from '@/components/admin/ProductItemEditor';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { uploadProductImage } from '@/lib/adminProducts';
 import { generateId, slugify } from '@/lib/utils';
 import type { Product, ProductItem, ProductSpec } from '@/types';
 
@@ -19,6 +20,7 @@ function emptyProduct(): Omit<Product, 'id'> {
     createdAt: now,
     updatedAt: now,
     currency: 'INR',
+    price: 0,
     fabric: 'cotton',
     specifications: [],
     availability: '',
@@ -27,9 +29,23 @@ function emptyProduct(): Omit<Product, 'id'> {
   };
 }
 
-function emptyItem(displayOrder: number): ProductItem {
+function emptyItem(displayOrder: number, isPrimary: boolean): ProductItem {
+  return emptyItemWithImage(displayOrder, isPrimary, '');
+}
+
+function emptyItemWithImage(displayOrder: number, isPrimary: boolean, image: string): ProductItem {
   const now = new Date().toISOString();
-  return { id: generateId(), image: '', price: 0, displayOrder, status: 'ACTIVE', createdAt: now, updatedAt: now };
+  return {
+    id: generateId(),
+    image,
+    description: '',
+    price: null,
+    isPrimary,
+    displayOrder,
+    status: 'ACTIVE',
+    createdAt: now,
+    updatedAt: now,
+  };
 }
 
 const fieldClass =
@@ -49,6 +65,8 @@ export function ProductForm({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const dragIndex = useRef<number | null>(null);
+  const [bulkUpload, setBulkUpload] = useState<{ total: number; completed: number } | null>(null);
+  const [bulkFailures, setBulkFailures] = useState<File[]>([]);
 
   const update = <K extends keyof typeof draft>(key: K, value: (typeof draft)[K]) =>
     setDraft((current) => ({ ...current, [key]: value }));
@@ -77,10 +95,54 @@ export function ProductForm({
     }));
 
   const addItem = () =>
-    setDraft((current) => ({ ...current, items: [...current.items, emptyItem(current.items.length)] }));
+    setDraft((current) => ({
+      ...current,
+      items: [...current.items, emptyItem(current.items.length, current.items.length === 0)],
+    }));
 
   const removeItem = (index: number) =>
-    setDraft((current) => ({ ...current, items: current.items.filter((_, i) => i !== index) }));
+    setDraft((current) => {
+      const removed = current.items[index];
+      const items = current.items.filter((_, i) => i !== index);
+      if (removed?.isPrimary && items.length > 0) items[0] = { ...items[0], isPrimary: true };
+      return { ...current, items };
+    });
+
+  const setPrimaryItem = (index: number) =>
+    setDraft((current) => ({
+      ...current,
+      items: current.items.map((item, i) => ({ ...item, isPrimary: i === index })),
+    }));
+
+  /**
+   * Bulk multi-select upload: files are resized/uploaded sequentially
+   * (Supabase Storage's SDK gives no combined-batch call, and doing all of
+   * them at once risks the browser throttling many parallel canvas resizes
+   * on a low-end admin device) — each success appends a new item
+   * immediately, so partial progress is never lost if a later file fails.
+   */
+  const uploadMany = async (files: File[]) => {
+    setBulkFailures([]);
+    setBulkUpload({ total: files.length, completed: 0 });
+    const failed: File[] = [];
+
+    for (const file of files) {
+      try {
+        const image = await uploadProductImage(file);
+        setDraft((current) => ({
+          ...current,
+          items: [...current.items, emptyItemWithImage(current.items.length, current.items.length === 0, image)],
+        }));
+      } catch {
+        failed.push(file);
+      } finally {
+        setBulkUpload((current) => (current ? { ...current, completed: current.completed + 1 } : current));
+      }
+    }
+
+    setBulkFailures(failed);
+    setBulkUpload(null);
+  };
 
   const reorderItems = (targetIndex: number) => {
     const from = dragIndex.current;
@@ -103,17 +165,22 @@ export function ProductForm({
       return;
     }
     if (draft.items.length === 0) {
-      setError('Add at least one item before saving — a product with none is saved but never shown to customers.');
+      setError('Add at least one image before saving — a product with none is saved but never shown to customers.');
+      return;
+    }
+    if (!Number.isFinite(draft.price) || draft.price < 0) {
+      setError('Product price must be 0 or more.');
       return;
     }
     for (const item of draft.items) {
-      if (!Number.isFinite(item.price) || item.price < 0) {
-        setError('Every item needs a price of 0 or more.');
+      if (item.price !== null && (!Number.isFinite(item.price) || item.price < 0)) {
+        setError('Every custom image price needs to be 0 or more.');
         return;
       }
     }
 
     const id = initialProduct?.id ?? (slugify(draft.name) || `product-${Date.now()}`);
+    const hasPrimary = draft.items.some((item) => item.isPrimary);
 
     setSaving(true);
     try {
@@ -122,6 +189,9 @@ export function ProductForm({
         id,
         updatedAt: new Date().toISOString(),
         specifications: draft.specifications.filter((spec) => spec.label.trim() || spec.value.trim()),
+        items: hasPrimary
+          ? draft.items
+          : draft.items.map((item, index) => ({ ...item, isPrimary: index === 0 })),
       });
     } finally {
       setSaving(false);
@@ -138,6 +208,17 @@ export function ProductForm({
         <label className="flex flex-col gap-1.5">
           <span className={labelClass}>Product name *</span>
           <Input value={draft.name} onChange={(e) => update('name', e.target.value)} required />
+        </label>
+
+        <label className="flex flex-col gap-1.5">
+          <span className={labelClass}>Price (INR) *</span>
+          <Input
+            type="number"
+            min={0}
+            value={draft.price || ''}
+            onChange={(e) => update('price', Number(e.target.value))}
+            required
+          />
         </label>
 
         <label className="flex flex-col gap-1.5">
@@ -234,21 +315,58 @@ export function ProductForm({
         <div>
           <span className={labelClass}>Product images</span>
           <p className="mt-1 font-sans text-xs text-earth/80">
-            Each image is a separately priced item — e.g. a colourway or size. Drag the handle to
-            reorder them; the order here is the order customers see.
+            Select several photos at once to upload them together. Each image can carry its own
+            caption and, if needed, its own price — otherwise it uses the product price above. Drag
+            the handle to reorder; the cover image is what customers see on the collection grid.
           </p>
         </div>
 
+        <label className="self-start rounded-sm border border-gold/50 bg-gold/5 px-4 py-2 font-sans text-xs uppercase tracking-wide text-maroon transition-colors hover:bg-gold/10">
+          {bulkUpload ? `Uploading photo ${bulkUpload.completed + 1} of ${bulkUpload.total}…` : 'Select multiple images'}
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            disabled={!!bulkUpload}
+            onChange={(e) => {
+              const files = Array.from(e.target.files ?? []);
+              e.target.value = '';
+              if (files.length > 0) uploadMany(files);
+            }}
+            className="hidden"
+          />
+        </label>
+
+        {bulkFailures.length > 0 && (
+          <div className="rounded-sm border border-maroon/40 bg-maroon/5 px-4 py-3 font-sans text-xs text-maroon">
+            <p>{bulkFailures.length} image{bulkFailures.length === 1 ? '' : 's'} failed to upload:</p>
+            <ul className="mt-1 list-disc pl-4">
+              {bulkFailures.map((file) => (
+                <li key={file.name}>{file.name}</li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              onClick={() => uploadMany(bulkFailures)}
+              className="mt-2 uppercase tracking-wide underline"
+            >
+              Retry failed uploads
+            </button>
+          </div>
+        )}
+
         {draft.items.length === 0 && (
-          <p className="font-sans text-sm text-earth">No images yet — add at least one below.</p>
+          <p className="font-sans text-sm text-earth">No images yet — select some above, or add one manually.</p>
         )}
 
         {draft.items.map((item, index) => (
           <ProductItemEditor
             key={item.id}
             item={item}
+            productPrice={draft.price}
             onChange={(patch) => updateItem(index, patch)}
             onRemove={() => removeItem(index)}
+            onSetPrimary={() => setPrimaryItem(index)}
             draggable={draft.items.length > 1}
             onDragStart={() => {
               dragIndex.current = index;
@@ -261,9 +379,9 @@ export function ProductForm({
         <button
           type="button"
           onClick={addItem}
-          className="self-start rounded-sm border border-gold/50 px-4 py-2 font-sans text-xs uppercase tracking-wide text-maroon transition-colors hover:bg-gold/10"
+          className="self-start font-sans text-xs uppercase tracking-wide text-maroon underline"
         >
-          + Add image
+          + Add one manually
         </button>
       </div>
 

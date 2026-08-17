@@ -71,7 +71,7 @@ export const SITE_CONFIG: SiteConfig = {
   url: process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ambalatharahandlooms.com',
   locale: 'en_IN',
   established: 'Est. Kerala, India',
-  contactEmail: 'weave@ambalatharahandloons.com',
+  contactEmail: 'holidaysambalathara@gmail.com',
 };
 
 /**
@@ -166,7 +166,7 @@ export const SOCIAL_LINKS: SocialLink[] = [
     ? [{ label: 'Instagram', href: INSTAGRAM_URL, icon: 'instagram' as const }]
     : []),
   { label: 'Facebook', href: 'https://facebook.com', icon: 'facebook' },
-  { label: 'Email', href: 'mailto:weave@ambalatharahandloons.com', icon: 'mail' },
+  { label: 'Email', href: `mailto:${SITE_CONFIG.contactEmail}`, icon: 'mail' },
 ];
 
 /** Copy for the notify form, kept here so marketing can edit in one place. */

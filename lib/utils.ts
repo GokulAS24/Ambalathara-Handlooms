@@ -36,6 +36,11 @@ export function formatPrice(price: number): string {
   return PRICE_FORMATTER.format(price);
 }
 
+/** An item's own price if it set one, otherwise its parent product's. */
+export function effectivePrice(product: { price: number }, item: { price: number | null }): number {
+  return item.price ?? product.price;
+}
+
 /** e.g. "Kasavu Signature Saree" -> "kasavu-signature-saree". Used to seed new product ids. */
 export function slugify(value: string): string {
   return value

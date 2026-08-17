@@ -1,9 +1,10 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import Image from 'next/image';
 import { OrnamentalDivider } from '@/components/landing/OrnamentalDivider';
 import { Button } from '@/components/ui/Button';
-import { SITE_CONFIG } from '@/lib/constants';
+import { LOGO_REVEAL_ASPECT, LOGO_REVEAL_SRC, SITE_CONFIG } from '@/lib/constants';
 
 const rise = {
   hidden: { opacity: 0, y: 24 },
@@ -26,9 +27,11 @@ const HERO_SUBCOPY =
 
 /**
  * The main site's own hero — distinct from the countdown page's Hero.
- * No brand mark here: the reveal already happens once, in LogoReveal,
- * on the way in from the countdown (see components/layout/LogoReveal.tsx)
- * — repeating it here would just be the same moment twice.
+ * Opens with the brand mark itself: LogoReveal (components/layout/
+ * LogoReveal.tsx) only ever plays once, during the transition out of the
+ * countdown — anyone landing directly on a live link afterward, or
+ * scrolling back to the top later, never sees it. The homepage needed its
+ * own opening brand moment independent of that one-time transition.
  */
 export function MainHero() {
   return (
@@ -36,6 +39,23 @@ export function MainHero() {
       id="home"
       className="relative flex w-full scroll-mt-20 flex-col items-center gap-6 px-5 pb-20 pt-16 text-center sm:gap-8 sm:px-8 sm:pb-28 sm:pt-24"
     >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        whileInView={{ opacity: 1, scale: 1 }}
+        viewport={{ once: true, amount: 0.4 }}
+        transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+        className="relative w-full"
+        style={{ width: 'clamp(6rem, 22vw, 9rem)', aspectRatio: LOGO_REVEAL_ASPECT }}
+      >
+        <Image
+          src={LOGO_REVEAL_SRC}
+          alt={`${SITE_CONFIG.name} emblem`}
+          fill
+          sizes="9rem"
+          className="object-contain mix-blend-multiply"
+        />
+      </motion.div>
+
       <motion.p
         custom={0}
         variants={rise}

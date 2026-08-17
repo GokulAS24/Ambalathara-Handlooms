@@ -1,23 +1,40 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { cn } from '@/lib/utils';
 import { SITE_CONFIG } from '@/lib/constants';
 
 const LINKS = [
   { label: 'Home', href: '#home' },
-  { label: 'Services', href: '#services' },
   { label: 'Products', href: '#products' },
+  { label: 'Services', href: '#services' },
   { label: 'Contact', href: '#contact' },
 ] as const;
 
 /**
- * Server-safe: plain `#anchor` links to same-page sections (not Next
- * `Link`, which is for route transitions), relying on the global
- * `scroll-behavior: smooth` already set in globals.css — no extra JS for
- * the scrolling itself. `sticky` rather than `fixed` so it starts in
- * normal flow and doesn't need a compensating top-padding hack on the
- * hero beneath it.
+ * `sticky` rather than `fixed` so it starts in normal flow and doesn't need
+ * a compensating top-padding hack on the hero beneath it. Client component
+ * (unlike the rest of this file's server-safe siblings) purely for the
+ * scroll listener that deepens its shadow/border once the hero has scrolled
+ * past — the links themselves are still plain `#anchor` scrolls, no router.
  */
 export function Navbar() {
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-gold/30 bg-cream-100/90 backdrop-blur-md">
+    <header
+      className={cn(
+        'sticky top-0 z-40 w-full border-b bg-cream-100/90 backdrop-blur-md transition-shadow duration-300',
+        scrolled ? 'border-gold/50 shadow-md' : 'border-gold/30'
+      )}
+    >
       <nav
         aria-label="Primary"
         className="mx-auto flex w-full max-w-6xl items-center justify-between gap-1.5 px-3 py-3.5 sm:gap-4 sm:px-8 sm:py-4"
@@ -37,9 +54,10 @@ export function Navbar() {
             <li key={link.href}>
               <a
                 href={link.href}
-                className="whitespace-nowrap transition-colors duration-300 hover:text-maroon"
+                className="group relative whitespace-nowrap py-1 transition-colors duration-300 hover:text-maroon"
               >
                 {link.label}
+                <span className="absolute inset-x-0 -bottom-0.5 h-px origin-left scale-x-0 bg-maroon transition-transform duration-300 ease-out group-hover:scale-x-100" />
               </a>
             </li>
           ))}

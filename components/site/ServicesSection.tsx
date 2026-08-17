@@ -68,7 +68,7 @@ export function ServicesSection() {
             <motion.li
               key={service.title}
               variants={card}
-              className="card-handloom flex flex-col gap-3 rounded-sm p-6 shadow-zari transition-transform duration-300 hover:-translate-y-1"
+              className="card-handloom flex flex-col gap-3 rounded-sm p-6 shadow-zari transition-all duration-300 hover:-translate-y-1 hover:border-gold hover:shadow-lg"
             >
               <service.icon className="h-7 w-7 text-maroon" aria-hidden />
               <h3 className="font-serif text-lg text-maroon">{service.title}</h3>

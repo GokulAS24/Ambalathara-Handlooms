@@ -3,56 +3,19 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useMemo, useState } from 'react';
 import { OrnamentalDivider } from '@/components/landing/OrnamentalDivider';
+import { ProductCard } from '@/components/site/ProductCard';
 import { ProductImageViewer } from '@/components/site/ProductImageViewer';
-import { ProductItemCard } from '@/components/site/ProductItemCard';
 import { useProducts } from '@/hooks/useProducts';
-import type { Product, ProductItem } from '@/types';
+import type { Product } from '@/types';
 
 const container = {
   hidden: {},
   show: { transition: { staggerChildren: 0.08, delayChildren: 0.1 } },
 };
 
-/** One product's own section: its name/description, then a grid of its priced items. */
-function ProductGroup({ product, onSelect }: { product: Product; onSelect: (product: Product, item: ProductItem) => void }) {
-  const activeItems = product.items
-    .filter((item) => item.status === 'ACTIVE')
-    .sort((a, b) => a.displayOrder - b.displayOrder);
-
-  if (activeItems.length === 0) return null;
-
-  return (
-    <div className="w-full">
-      <div className="mx-auto max-w-2xl text-center">
-        <h3 className="font-serif text-2xl text-maroon sm:text-3xl">{product.name}</h3>
-        {product.description && (
-          <p className="mt-3 font-sans text-sm leading-relaxed text-earth">{product.description}</p>
-        )}
-      </div>
-
-      <motion.ul
-        variants={container}
-        initial="hidden"
-        whileInView="show"
-        viewport={{ once: true, amount: 0.15 }}
-        className="mt-8 grid grid-cols-2 gap-5 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4"
-      >
-        {activeItems.map((item) => (
-          <ProductItemCard
-            key={item.id}
-            item={item}
-            fabric={product.fabric}
-            onSelect={(selected) => onSelect(product, selected)}
-          />
-        ))}
-      </motion.ul>
-    </div>
-  );
-}
-
 export function ProductsSection() {
   const { products, loading, error, refetch } = useProducts();
-  const [viewer, setViewer] = useState<{ product: Product; item: ProductItem } | null>(null);
+  const [viewer, setViewer] = useState<Product | null>(null);
 
   const activeProducts = useMemo(
     () =>
@@ -87,26 +50,22 @@ export function ProductsSection() {
         ) : activeProducts.length === 0 ? (
           <p className="mt-14 text-center font-sans text-sm text-earth">Products will be available soon.</p>
         ) : (
-          <div className="mt-14 flex flex-col gap-16">
-            {activeProducts.map((product, index) => (
-              <div key={product.id} className="flex flex-col gap-16">
-                {index > 0 && <OrnamentalDivider className="mx-auto max-w-xs opacity-60" />}
-                <ProductGroup product={product} onSelect={(p, item) => setViewer({ product: p, item })} />
-              </div>
+          <motion.ul
+            variants={container}
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, amount: 0.1 }}
+            className="mt-14 grid grid-cols-2 gap-5 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4"
+          >
+            {activeProducts.map((product) => (
+              <ProductCard key={product.id} product={product} onSelect={() => setViewer(product)} />
             ))}
-          </div>
+          </motion.ul>
         )}
       </div>
 
       <AnimatePresence>
-        {viewer && (
-          <ProductImageViewer
-            product={viewer.product}
-            activeItem={viewer.item}
-            onNavigate={(item) => setViewer({ product: viewer.product, item })}
-            onClose={() => setViewer(null)}
-          />
-        )}
+        {viewer && <ProductImageViewer product={viewer} onClose={() => setViewer(null)} />}
       </AnimatePresence>
     </section>
   );

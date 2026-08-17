@@ -75,15 +75,21 @@ export interface ProductSpec {
 }
 
 /**
- * One priced, orderable image within a product — e.g. a colourway or
- * finish, each with its own price. Price lives here, never on `Product`
- * itself: a product with no items has nothing to sell yet.
+ * One orderable image within a product's gallery — e.g. a detail shot or
+ * colourway. Priced independently only when `price` is set; `null` means
+ * "use the parent product's price" (see `effectivePrice` in lib/utils.ts),
+ * which is the common case — most images of one product share one price.
  */
 export interface ProductItem {
   id: string;
-  /** Path under /public, or empty for the fabric-tinted placeholder swatch. */
+  /** Path under /public, a Supabase Storage URL, or empty for the fabric-tinted placeholder swatch. */
   image: string;
-  price: number;
+  /** This image's own caption — distinct from the product's own description. */
+  description: string;
+  /** null = inherit the product's price. */
+  price: number | null;
+  /** The product's cover image — shown on its catalogue card. At most one per product. */
+  isPrimary: boolean;
   displayOrder: number;
   status: ProductStatus;
   createdAt: string;
@@ -99,6 +105,8 @@ export interface Product {
   createdAt: string;
   updatedAt: string;
   currency: 'INR';
+  /** Default price for the product and any item that doesn't set its own. */
+  price: number;
   fabric: 'cotton' | 'silk' | 'kasavu' | 'linen';
   specifications: ProductSpec[];
   availability: string;

@@ -17,6 +17,7 @@ type ProductRow = {
   description: string;
   status: 'ACTIVE' | 'INACTIVE';
   display_order: number;
+  price: number;
   fabric: Product['fabric'];
   specifications: Product['specifications'];
   availability: string;
@@ -29,7 +30,9 @@ type ProductItemRow = {
   id: string;
   product_id: string;
   image: string;
-  price: number;
+  description: string;
+  price: number | null;
+  is_primary: boolean;
   display_order: number;
   status: 'ACTIVE' | 'INACTIVE';
   created_at: string;
@@ -43,6 +46,7 @@ function toProduct(row: ProductRow, items: ProductItemRow[]): Product {
     description: row.description,
     status: row.status,
     displayOrder: row.display_order,
+    price: Number(row.price),
     fabric: row.fabric,
     specifications: row.specifications ?? [],
     availability: row.availability,
@@ -61,7 +65,9 @@ function toProductItem(row: ProductItemRow): ProductItem {
   return {
     id: row.id,
     image: row.image,
-    price: Number(row.price),
+    description: row.description,
+    price: row.price === null ? null : Number(row.price),
+    isPrimary: row.is_primary,
     displayOrder: row.display_order,
     status: row.status,
     createdAt: row.created_at,
@@ -95,13 +101,35 @@ export async function fetchProducts(): Promise<Product[]> {
  * theoretically leave a product briefly item-less; acceptable for a
  * low-traffic, single-admin panel, not for a high-concurrency store.
  */
+/**
+ * Guards the one way this schema could silently balloon: a raw base64
+ * data: URL landing in the `image` column instead of a Storage URL. That
+ * happened for real once already — a since-removed "import old localStorage
+ * drafts" feature wrote pre-migration data-URL images straight into
+ * Postgres unmodified (100-280KB of text per row, no CDN caching, no
+ * Storage cleanup on delete). The image field also accepts free-typed text
+ * (ProductItemEditor's manual URL input), so this check belongs at the
+ * write boundary, not just at that one now-deleted entry point.
+ */
+function assertNoDataUrlImages(product: Product): void {
+  const offender = product.items.find((item) => item.image.startsWith('data:'));
+  if (offender) {
+    throw new Error(
+      `"${product.name}" has an image saved as raw embedded data instead of an uploaded file. Re-upload it via the file picker before saving.`
+    );
+  }
+}
+
 export async function upsertProduct(product: Product): Promise<void> {
+  assertNoDataUrlImages(product);
+
   const { error: productError } = await supabase.from('products').upsert({
     id: product.id,
     name: product.name,
     description: product.description,
     status: product.status,
     display_order: product.displayOrder,
+    price: product.price,
     fabric: product.fabric,
     specifications: product.specifications,
     availability: product.availability,
@@ -118,7 +146,9 @@ export async function upsertProduct(product: Product): Promise<void> {
         id: item.id,
         product_id: product.id,
         image: item.image,
+        description: item.description,
         price: item.price,
+        is_primary: item.isPrimary,
         display_order: item.displayOrder,
         status: item.status,
       }))

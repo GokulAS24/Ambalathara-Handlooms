@@ -11,29 +11,11 @@ import type { Product } from '@/types';
 
 type View = 'list' | 'new' | Product;
 
-/** The key the old, since-removed localStorage-only admin used to save drafts under. */
-const LEGACY_LOCAL_KEY = 'ambalathara-admin-products-v1';
-
 export function AdminApp() {
   const { products, loading, error, refetch } = useProducts();
   const [view, setView] = useState<View>('list');
   const [actionError, setActionError] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [legacyProducts, setLegacyProducts] = useState<Product[] | null>(null);
-
-  useEffect(() => {
-    // One-time safety net: this project used to keep product drafts in
-    // this browser's localStorage before Supabase became the real
-    // backend. If this browser still has one sitting here from before the
-    // migration, offer to import it rather than silently losing it.
-    try {
-      const raw = window.localStorage.getItem(LEGACY_LOCAL_KEY);
-      const parsed = raw ? JSON.parse(raw) : null;
-      if (Array.isArray(parsed) && parsed.length > 0) setLegacyProducts(parsed);
-    } catch {
-      // Unparseable leftover — nothing to import.
-    }
-  }, []);
+  const [, setBusy] = useState(false);
 
   useEffect(() => {
     document.documentElement.classList.add('admin-page');
@@ -46,8 +28,8 @@ export function AdminApp() {
     try {
       await action();
       refetch();
-    } catch {
-      setActionError(failureMessage);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : failureMessage);
     } finally {
       setBusy(false);
     }
@@ -76,17 +58,6 @@ export function AdminApp() {
     runAction(() => reorderProducts(next), 'Reorder failed. Please try again.');
   };
 
-  const importLegacy = async () => {
-    if (!legacyProducts) return;
-    await runAction(async () => {
-      for (const product of legacyProducts) {
-        await upsertProduct(product);
-      }
-    }, 'Import failed. Please try again.');
-    window.localStorage.removeItem(LEGACY_LOCAL_KEY);
-    setLegacyProducts(null);
-  };
-
   return (
     <AdminGate>
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-5 py-12 sm:px-8">
@@ -97,27 +68,6 @@ export function AdminApp() {
             you save, no publish step.
           </p>
         </header>
-
-        {legacyProducts && (
-          <div className="rounded-sm border border-gold/50 bg-gold/5 px-4 py-3 font-sans text-sm text-charcoal">
-            <p>
-              Found {legacyProducts.length} product{legacyProducts.length === 1 ? '' : 's'} saved in this
-              browser from before the switch to a shared database. Import them into the live catalog?
-            </p>
-            <div className="mt-2 flex gap-4">
-              <button type="button" onClick={importLegacy} disabled={busy} className="font-medium uppercase tracking-wide text-maroon underline">
-                Import now
-              </button>
-              <button
-                type="button"
-                onClick={() => setLegacyProducts(null)}
-                className="uppercase tracking-wide text-earth underline"
-              >
-                Dismiss
-              </button>
-            </div>
-          </div>
-        )}
 
         {actionError && (
           <p className="rounded-sm border border-maroon/40 bg-maroon/5 px-4 py-3 font-sans text-sm text-maroon">

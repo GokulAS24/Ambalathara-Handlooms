@@ -17,8 +17,8 @@ export function MainSite() {
     <main className="relative w-full">
       <Navbar />
       <MainHero />
-      <ServicesSection />
       <ProductsSection />
+      <ServicesSection />
       <ContactSection />
     </main>
   );
