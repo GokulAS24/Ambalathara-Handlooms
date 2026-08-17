@@ -1,3 +1,4 @@
+import { BrandStorySection } from '@/components/site/BrandStorySection';
 import { ContactSection } from '@/components/site/ContactSection';
 import { MainHero } from '@/components/site/MainHero';
 import { Navbar } from '@/components/site/Navbar';
@@ -17,6 +18,7 @@ export function MainSite() {
     <main className="relative w-full">
       <Navbar />
       <MainHero />
+      <BrandStorySection />
       <ProductsSection />
       <ServicesSection />
       <ContactSection />

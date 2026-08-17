@@ -1,12 +1,10 @@
 'use client';
 
-import { AnimatePresence, motion } from 'framer-motion';
-import { useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
+import { useMemo } from 'react';
 import { OrnamentalDivider } from '@/components/landing/OrnamentalDivider';
 import { ProductCard } from '@/components/site/ProductCard';
-import { ProductImageViewer } from '@/components/site/ProductImageViewer';
 import { useProducts } from '@/hooks/useProducts';
-import type { Product } from '@/types';
 
 const container = {
   hidden: {},
@@ -15,7 +13,6 @@ const container = {
 
 export function ProductsSection() {
   const { products, loading, error, refetch } = useProducts();
-  const [viewer, setViewer] = useState<Product | null>(null);
 
   const activeProducts = useMemo(
     () =>
@@ -58,15 +55,11 @@ export function ProductsSection() {
             className="mt-14 grid grid-cols-2 gap-5 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4"
           >
             {activeProducts.map((product) => (
-              <ProductCard key={product.id} product={product} onSelect={() => setViewer(product)} />
+              <ProductCard key={product.id} product={product} />
             ))}
           </motion.ul>
         )}
       </div>
-
-      <AnimatePresence>
-        {viewer && <ProductImageViewer product={viewer} onClose={() => setViewer(null)} />}
-      </AnimatePresence>
     </section>
   );
 }

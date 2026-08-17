@@ -1,6 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import Link from 'next/link';
 import { ProductSwatch } from '@/components/site/ProductSwatch';
 import { formatPrice } from '@/lib/utils';
 import type { Product } from '@/types';
@@ -12,21 +13,19 @@ const card = {
 
 /**
  * One card per product — its cover (primary) image, name, fabric and
- * price. Clicking opens the full gallery of that product's other images
- * (see ProductImageViewer). Interactivity is signalled identically on
- * hover and `:focus-visible`, since hover-only affordances fail touch and
- * keyboard users.
+ * price. Clicking navigates to that product's own page (app/products/[id])
+ * for its full gallery and details. Interactivity is signalled identically
+ * on hover and `:focus-visible`, since hover-only affordances fail touch
+ * and keyboard users.
  */
-export function ProductCard({ product, onSelect }: { product: Product; onSelect: () => void }) {
+export function ProductCard({ product }: { product: Product }) {
   const activeItems = product.items.filter((item) => item.status === 'ACTIVE');
   const cover = activeItems.find((item) => item.isPrimary) ?? activeItems[0];
 
   return (
     <motion.li variants={card} className="list-none">
-      <button
-        type="button"
-        onClick={onSelect}
-        aria-haspopup="dialog"
+      <Link
+        href={`/products/${product.id}`}
         className="card-handloom group flex w-full flex-col overflow-hidden rounded-sm text-left shadow-zari transition-all duration-300 hover:-translate-y-1 hover:border-gold hover:shadow-lg focus-visible:-translate-y-1 focus-visible:border-gold focus-visible:shadow-lg"
       >
         <div className="relative overflow-hidden">
@@ -61,7 +60,7 @@ export function ProductCard({ product, onSelect }: { product: Product; onSelect:
             </span>
           </span>
         </div>
-      </button>
+      </Link>
     </motion.li>
   );
 }

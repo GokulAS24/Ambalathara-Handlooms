@@ -2,7 +2,7 @@ import { forwardRef } from 'react';
 import { cn } from '@/lib/utils';
 
 type Variant = 'primary' | 'ghost';
-type Size = 'sm' | 'md';
+type Size = 'sm' | 'md' | 'lg';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
@@ -20,6 +20,13 @@ export const BUTTON_VARIANTS: Record<Variant, string> = {
 export const BUTTON_SIZES: Record<Size, string> = {
   sm: 'h-[var(--control-h-sm)] px-5 text-[length:var(--text-control-sm)]',
   md: 'h-[var(--control-h)] px-7 text-[length:var(--text-control)]',
+  /**
+   * Fixed (not vh-clamped) on purpose — unlike sm/md, this is only used
+   * outside the countdown page's one-screen fluid budget (e.g. the
+   * product modal's CTAs), where a real scrolling page has no reason to
+   * shrink a "Buy Now"-equivalent button as height gets scarce.
+   */
+  lg: 'h-14 px-8 text-sm',
 };
 
 /**

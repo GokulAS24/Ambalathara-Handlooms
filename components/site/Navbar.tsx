@@ -1,5 +1,6 @@
 'use client';
 
+import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { SITE_CONFIG } from '@/lib/constants';
@@ -14,12 +15,16 @@ const LINKS = [
 /**
  * `sticky` rather than `fixed` so it starts in normal flow and doesn't need
  * a compensating top-padding hack on the hero beneath it. Client component
- * (unlike the rest of this file's server-safe siblings) purely for the
+ * (unlike the rest of this file's server-safe siblings) partly for the
  * scroll listener that deepens its shadow/border once the hero has scrolled
- * past — the links themselves are still plain `#anchor` scrolls, no router.
+ * past, and partly for `usePathname` — these are plain `#anchor` scrolls
+ * that only work on `/` itself; any other route (e.g. a product's own page)
+ * needs the `/` prefixed back on so the browser navigates home first.
  */
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
+  const pathname = usePathname();
+  const onHome = pathname === '/';
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -40,7 +45,7 @@ export function Navbar() {
         className="mx-auto flex w-full max-w-6xl items-center justify-between gap-1.5 px-3 py-3.5 sm:gap-4 sm:px-8 sm:py-4"
       >
         <a
-          href="#home"
+          href={onHome ? '#home' : '/#home'}
           className="shrink-0 font-serif text-[0.9rem] font-semibold tracking-wide text-maroon sm:text-xl"
         >
           {SITE_CONFIG.shortName}{' '}
@@ -53,7 +58,7 @@ export function Navbar() {
           {LINKS.map((link) => (
             <li key={link.href}>
               <a
-                href={link.href}
+                href={onHome ? link.href : `/${link.href}`}
                 className="group relative whitespace-nowrap py-1 transition-colors duration-300 hover:text-maroon"
               >
                 {link.label}
