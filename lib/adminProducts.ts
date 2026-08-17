@@ -1,79 +1,166 @@
-import type { Product } from '@/types';
+import { supabase } from '@/lib/supabase/client';
+import type { Product, ProductItem } from '@/types';
 
 /**
- * Storage for the admin portal's product drafts. This site is statically
- * generated with no server-side storage, so "editing products" here means
- * editing a draft that lives in the admin's own browser — not a shared
- * database. See lib/products.ts's own header and the admin portal for the
- * full picture: this is the draft; that file is what actually ships to
- * real visitors, until someone exports and redeploys.
+ * All product persistence, for both the public catalog and the admin
+ * panel — Supabase Postgres is the single source of truth (see
+ * supabase/migrations/0001_init.sql for the schema/RLS). No browser
+ * storage holds product data; the only thing that ever touches
+ * localStorage now is the Supabase Auth SDK's own session token, which is
+ * its standard, expected behaviour for keeping an admin signed in between
+ * visits — not something this file manages.
  */
-const ADMIN_PRODUCTS_KEY = 'ambalathara-admin-products-v1';
 
-/** Null when nothing has been saved yet, or the stored value is unparseable. */
-export function loadAdminProducts(): Product[] | null {
-  if (typeof window === 'undefined') return null;
+type ProductRow = {
+  id: string;
+  name: string;
+  description: string;
+  status: 'ACTIVE' | 'INACTIVE';
+  display_order: number;
+  fabric: Product['fabric'];
+  specifications: Product['specifications'];
+  availability: string;
+  delivery: string;
+  created_at: string;
+  updated_at: string;
+};
 
-  try {
-    const raw = window.localStorage.getItem(ADMIN_PRODUCTS_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as Product[]) : null;
-  } catch {
-    return null;
+type ProductItemRow = {
+  id: string;
+  product_id: string;
+  image: string;
+  price: number;
+  display_order: number;
+  status: 'ACTIVE' | 'INACTIVE';
+  created_at: string;
+  updated_at: string;
+};
+
+function toProduct(row: ProductRow, items: ProductItemRow[]): Product {
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    status: row.status,
+    displayOrder: row.display_order,
+    fabric: row.fabric,
+    specifications: row.specifications ?? [],
+    availability: row.availability,
+    delivery: row.delivery,
+    currency: 'INR',
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    items: items
+      .filter((item) => item.product_id === row.id)
+      .sort((a, b) => a.display_order - b.display_order)
+      .map(toProductItem),
+  };
+}
+
+function toProductItem(row: ProductItemRow): ProductItem {
+  return {
+    id: row.id,
+    image: row.image,
+    price: Number(row.price),
+    displayOrder: row.display_order,
+    status: row.status,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+/**
+ * Every product with every item, regardless of status — RLS gives an
+ * anonymous visitor only ACTIVE rows and a signed-in admin everything, so
+ * this same query is safe to call from both the public catalog and the
+ * admin panel; the database enforces the difference, not this code.
+ */
+export async function fetchProducts(): Promise<Product[]> {
+  const [{ data: products, error: productsError }, { data: items, error: itemsError }] = await Promise.all([
+    supabase.from('products').select('*').order('display_order', { ascending: true }),
+    supabase.from('product_items').select('*').order('display_order', { ascending: true }),
+  ]);
+
+  if (productsError) throw productsError;
+  if (itemsError) throw itemsError;
+
+  return (products ?? []).map((row) => toProduct(row as ProductRow, (items ?? []) as ProductItemRow[]));
+}
+
+/**
+ * Upserts the product row, then replaces its items wholesale (delete all,
+ * reinsert the current list). Simple and correct for the item counts this
+ * catalog actually has (a handful per product) — not wrapped in a single
+ * DB transaction, so a failure between the delete and the reinsert could
+ * theoretically leave a product briefly item-less; acceptable for a
+ * low-traffic, single-admin panel, not for a high-concurrency store.
+ */
+export async function upsertProduct(product: Product): Promise<void> {
+  const { error: productError } = await supabase.from('products').upsert({
+    id: product.id,
+    name: product.name,
+    description: product.description,
+    status: product.status,
+    display_order: product.displayOrder,
+    fabric: product.fabric,
+    specifications: product.specifications,
+    availability: product.availability,
+    delivery: product.delivery,
+  });
+  if (productError) throw productError;
+
+  const { error: deleteError } = await supabase.from('product_items').delete().eq('product_id', product.id);
+  if (deleteError) throw deleteError;
+
+  if (product.items.length > 0) {
+    const { error: insertError } = await supabase.from('product_items').insert(
+      product.items.map((item) => ({
+        id: item.id,
+        product_id: product.id,
+        image: item.image,
+        price: item.price,
+        display_order: item.displayOrder,
+        status: item.status,
+      }))
+    );
+    if (insertError) throw insertError;
   }
 }
 
-export function saveAdminProducts(products: Product[]): void {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem(ADMIN_PRODUCTS_KEY, JSON.stringify(products));
-  // So other tabs (e.g. the live site open alongside /admin) pick up the
-  // change immediately — see useAdminProducts' storage listener. The
-  // native `storage` event only fires in *other* tabs, not this one, so
-  // this dispatch is what lets a same-tab admin preview stay in sync too.
-  window.dispatchEvent(new Event('admin-products-updated'));
+export async function updateProductStatus(id: string, status: Product['status']): Promise<void> {
+  const { error } = await supabase.from('products').update({ status }).eq('id', id);
+  if (error) throw error;
 }
 
-/** Discards the local draft, reverting the site back to lib/products.ts's defaults. */
-export function clearAdminProducts(): void {
-  if (typeof window === 'undefined') return;
-  window.localStorage.removeItem(ADMIN_PRODUCTS_KEY);
-  window.dispatchEvent(new Event('admin-products-updated'));
+/** Bulk display-order update after a drag-reorder in the admin list. */
+export async function reorderProducts(products: Product[]): Promise<void> {
+  const results = await Promise.all(
+    products.map((product) =>
+      supabase.from('products').update({ display_order: product.displayOrder }).eq('id', product.id)
+    )
+  );
+  const failed = results.find((result) => result.error);
+  if (failed?.error) throw failed.error;
 }
 
 /**
- * Builds the full replacement source for lib/products.ts. Plain
- * `JSON.stringify` output is already valid TS object-literal syntax (JSON
- * strings are a subset of JS string syntax, JSON's double-quoted keys are
- * valid as object keys too) — no need for a hand-rolled pretty-printer.
- * Cosmetically double-quoted rather than the hand-written file's single
- * quotes; that's an expected, harmless diff once pasted in.
+ * Deletes the product (its items cascade via the FK) and best-effort
+ * cleans up any Storage-hosted images so deleted products don't leave
+ * orphaned files behind.
  */
-export function generateProductsFileContent(products: Product[]): string {
-  return `import type { Product } from '@/types';
-
-/**
- * The product catalog — the one place to edit names, descriptions and
- * items. Generated by the admin portal (/admin) — edit there and
- * re-export, rather than hand-editing this array, so the two never drift.
- */
-export const PRODUCTS: Product[] = ${JSON.stringify(products, null, 2)};
-`;
+export async function deleteProduct(product: Product): Promise<void> {
+  await Promise.all(product.items.map((item) => deleteProductImage(item.image)));
+  const { error } = await supabase.from('products').delete().eq('id', product.id);
+  if (error) throw error;
 }
 
-/** Long edge cap for uploaded product photos, before they're stored as data URLs. */
+/** Long edge cap for uploaded product photos, applied before they're uploaded. */
 const MAX_IMAGE_DIMENSION = 1000;
 const IMAGE_QUALITY = 0.82;
+const STORAGE_BUCKET = 'product-images';
 
-/**
- * Resizes an uploaded image client-side (canvas) and returns it as a JPEG
- * data URL, so it can sit directly in a Product's `image` field with no
- * upload endpoint at all. Capped at MAX_IMAGE_DIMENSION on the long edge —
- * keeps localStorage comfortably within its per-origin quota (a handful of
- * MB in most browsers) and keeps the exported lib/products.ts a reasonable
- * size, rather than storing multi-megabyte originals verbatim.
- */
-export function resizeImageFile(file: File): Promise<string> {
+/** Resizes an uploaded image client-side (canvas) to a JPEG blob, ready to upload. */
+function resizeImageToBlob(file: File): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(reader.error ?? new Error('Could not read file'));
@@ -94,10 +181,44 @@ export function resizeImageFile(file: File): Promise<string> {
           return;
         }
         ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', IMAGE_QUALITY));
+        canvas.toBlob(
+          (blob) => (blob ? resolve(blob) : reject(new Error('Could not encode image'))),
+          'image/jpeg',
+          IMAGE_QUALITY
+        );
       };
       img.src = reader.result as string;
     };
     reader.readAsDataURL(file);
   });
+}
+
+/** Resizes then uploads to Supabase Storage, returning the public URL to store on the item. */
+export async function uploadProductImage(file: File): Promise<string> {
+  const blob = await resizeImageToBlob(file);
+  const path = `${crypto.randomUUID()}.jpg`;
+
+  const { error } = await supabase.storage.from(STORAGE_BUCKET).upload(path, blob, {
+    contentType: 'image/jpeg',
+    upsert: false,
+  });
+  if (error) throw error;
+
+  const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
+  return data.publicUrl;
+}
+
+/**
+ * Best-effort delete of a Storage-hosted image. Silently no-ops for
+ * anything that isn't one of our own Storage URLs (an admin-typed
+ * `/products/...` path, or the empty placeholder-swatch state) — there's
+ * nothing in Storage to clean up for those.
+ */
+export async function deleteProductImage(url: string): Promise<void> {
+  const marker = `/storage/v1/object/public/${STORAGE_BUCKET}/`;
+  const index = url.indexOf(marker);
+  if (index === -1) return;
+
+  const path = url.slice(index + marker.length);
+  await supabase.storage.from(STORAGE_BUCKET).remove([path]);
 }

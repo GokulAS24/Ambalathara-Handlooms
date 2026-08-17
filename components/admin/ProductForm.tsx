@@ -42,10 +42,11 @@ export function ProductForm({
   onCancel,
 }: {
   initialProduct?: Product;
-  onSave: (product: Product) => void;
+  onSave: (product: Product) => void | Promise<void>;
   onCancel: () => void;
 }) {
   const [draft, setDraft] = useState<Omit<Product, 'id'>>(initialProduct ?? emptyProduct());
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const dragIndex = useRef<number | null>(null);
 
@@ -94,7 +95,7 @@ export function ProductForm({
     });
   };
 
-  const submit = (event: React.FormEvent) => {
+  const submit = async (event: React.FormEvent) => {
     event.preventDefault();
 
     if (!draft.name.trim()) {
@@ -114,12 +115,17 @@ export function ProductForm({
 
     const id = initialProduct?.id ?? (slugify(draft.name) || `product-${Date.now()}`);
 
-    onSave({
-      ...draft,
-      id,
-      updatedAt: new Date().toISOString(),
-      specifications: draft.specifications.filter((spec) => spec.label.trim() || spec.value.trim()),
-    });
+    setSaving(true);
+    try {
+      await onSave({
+        ...draft,
+        id,
+        updatedAt: new Date().toISOString(),
+        specifications: draft.specifications.filter((spec) => spec.label.trim() || spec.value.trim()),
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -264,8 +270,10 @@ export function ProductForm({
       {error && <p className="font-sans text-sm text-maroon">{error}</p>}
 
       <div className="flex gap-3">
-        <Button type="submit">{initialProduct ? 'Save changes' : 'Add product'}</Button>
-        <Button type="button" variant="ghost" onClick={onCancel}>
+        <Button type="submit" disabled={saving}>
+          {saving ? 'Saving…' : initialProduct ? 'Save changes' : 'Add product'}
+        </Button>
+        <Button type="button" variant="ghost" onClick={onCancel} disabled={saving}>
           Cancel
         </Button>
       </div>

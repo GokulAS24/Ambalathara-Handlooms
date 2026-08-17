@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Input } from '@/components/ui/Input';
-import { resizeImageFile } from '@/lib/adminProducts';
+import { uploadProductImage } from '@/lib/adminProducts';
 import type { ProductItem } from '@/types';
 
 export function ProductItemEditor({
@@ -30,9 +30,9 @@ export function ProductItemEditor({
     setImageBusy(true);
     setImageError('');
     try {
-      onChange({ image: await resizeImageFile(file) });
+      onChange({ image: await uploadProductImage(file) });
     } catch {
-      setImageError('Could not read that image — try a different file.');
+      setImageError('Image upload failed. Please try again.');
     } finally {
       setImageBusy(false);
     }
@@ -75,7 +75,9 @@ export function ProductItemEditor({
           value={item.image}
           onChange={(e) => onChange({ image: e.target.value })}
           placeholder="/products/kasavu-saree.jpg"
+          disabled={imageBusy}
         />
+        {imageBusy && <p className="font-sans text-xs text-earth">Uploading…</p>}
         {imageError && <p className="font-sans text-xs text-maroon">{imageError}</p>}
 
         <div className="flex flex-wrap items-center gap-3">

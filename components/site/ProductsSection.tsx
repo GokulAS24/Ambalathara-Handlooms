@@ -5,7 +5,7 @@ import { useMemo, useState } from 'react';
 import { OrnamentalDivider } from '@/components/landing/OrnamentalDivider';
 import { ProductImageViewer } from '@/components/site/ProductImageViewer';
 import { ProductItemCard } from '@/components/site/ProductItemCard';
-import { useAdminProducts } from '@/hooks/useAdminProducts';
+import { useProducts } from '@/hooks/useProducts';
 import type { Product, ProductItem } from '@/types';
 
 const container = {
@@ -51,7 +51,7 @@ function ProductGroup({ product, onSelect }: { product: Product; onSelect: (prod
 }
 
 export function ProductsSection() {
-  const products = useAdminProducts();
+  const { products, loading, error, refetch } = useProducts();
   const [viewer, setViewer] = useState<{ product: Product; item: ProductItem } | null>(null);
 
   const activeProducts = useMemo(
@@ -71,7 +71,20 @@ export function ProductsSection() {
           <OrnamentalDivider className="mx-auto mt-6 max-w-xs opacity-80" />
         </div>
 
-        {activeProducts.length === 0 ? (
+        {loading ? (
+          <p className="mt-14 text-center font-sans text-sm text-earth">Loading collection…</p>
+        ) : error ? (
+          <div className="mt-14 text-center">
+            <p className="font-sans text-sm text-maroon">{error}</p>
+            <button
+              type="button"
+              onClick={refetch}
+              className="mt-3 font-sans text-xs uppercase tracking-wide text-maroon underline"
+            >
+              Try again
+            </button>
+          </div>
+        ) : activeProducts.length === 0 ? (
           <p className="mt-14 text-center font-sans text-sm text-earth">Products will be available soon.</p>
         ) : (
           <div className="mt-14 flex flex-col gap-16">

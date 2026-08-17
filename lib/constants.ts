@@ -169,13 +169,6 @@ export const SOCIAL_LINKS: SocialLink[] = [
   { label: 'Email', href: 'mailto:weave@ambalatharahandloons.com', icon: 'mail' },
 ];
 
-/**
- * Gate for /admin. See the comment above `NEXT_PUBLIC_ADMIN_PASSWORD` in
- * .env.example — this is a deterrent, not real security. Left unset,
- * `AdminGate` never unlocks for anyone.
- */
-export const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD ?? '';
-
 /** Copy for the notify form, kept here so marketing can edit in one place. */
 export const NOTIFY_COPY = {
   heading: 'Be the first to know when we weave our doors open',

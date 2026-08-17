@@ -3,7 +3,8 @@ import type { Product } from '@/types';
 
 /**
  * Fabric-tinted swatch, standing in for real photography until it exists
- * (see the note at the top of lib/products.ts). Deliberately reads as a
+ * (see supabase/migrations/0002_seed.sql — every seed item ships with an
+ * empty `image`). Deliberately reads as a
  * textile swatch, not a broken image — a soft diagonal gradient in the
  * fabric's own theme colour plus a faint weave hatch, with the fabric name
  * set the way a garment label would. Shared across every card/preview/

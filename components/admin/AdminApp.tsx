@@ -2,78 +2,89 @@
 
 import { useEffect, useState } from 'react';
 import { AdminGate } from '@/components/admin/AdminGate';
-import { ExportPanel } from '@/components/admin/ExportPanel';
 import { ProductForm } from '@/components/admin/ProductForm';
 import { ProductList } from '@/components/admin/ProductList';
 import { ProductsSection } from '@/components/site/ProductsSection';
-import { clearAdminProducts, loadAdminProducts, saveAdminProducts } from '@/lib/adminProducts';
-import { PRODUCTS } from '@/lib/products';
+import { deleteProduct, reorderProducts, updateProductStatus, upsertProduct } from '@/lib/adminProducts';
+import { useProducts } from '@/hooks/useProducts';
 import type { Product } from '@/types';
 
 type View = 'list' | 'new' | Product;
 
+/** The key the old, since-removed localStorage-only admin used to save drafts under. */
+const LEGACY_LOCAL_KEY = 'ambalathara-admin-products-v1';
+
 export function AdminApp() {
-  const [products, setProducts] = useState<Product[]>(PRODUCTS);
+  const { products, loading, error, refetch } = useProducts();
   const [view, setView] = useState<View>('list');
-  const [saveError, setSaveError] = useState('');
+  const [actionError, setActionError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [legacyProducts, setLegacyProducts] = useState<Product[] | null>(null);
 
   useEffect(() => {
-    setProducts(loadAdminProducts() ?? PRODUCTS);
+    // One-time safety net: this project used to keep product drafts in
+    // this browser's localStorage before Supabase became the real
+    // backend. If this browser still has one sitting here from before the
+    // migration, offer to import it rather than silently losing it.
+    try {
+      const raw = window.localStorage.getItem(LEGACY_LOCAL_KEY);
+      const parsed = raw ? JSON.parse(raw) : null;
+      if (Array.isArray(parsed) && parsed.length > 0) setLegacyProducts(parsed);
+    } catch {
+      // Unparseable leftover — nothing to import.
+    }
   }, []);
 
   useEffect(() => {
-    // html/body default to overflow:hidden (see globals.css) for the
-    // countdown page's one-viewport layout, which normally gets undone by
-    // LaunchGate's `site-launched` class once the main site takes over.
-    // /admin never mounts LaunchGate, so without this it inherits that
-    // overflow:hidden with nothing to turn it off — this page is far
-    // taller than one viewport (product list, form, export panel, and a
-    // full embedded site preview) and needs to actually scroll.
     document.documentElement.classList.add('admin-page');
     return () => document.documentElement.classList.remove('admin-page');
   }, []);
 
-  /**
-   * Every mutation goes through here: update local state, then persist.
-   * `saveAdminProducts` writes to localStorage, which can throw (quota
-   * exceeded — most likely from a lot of uploaded, unresized-by-mistake
-   * images) — caught here so a failed save surfaces a message instead of
-   * silently losing the edit.
-   */
-  const persist = (next: Product[]) => {
-    setProducts(next);
+  const runAction = async (action: () => Promise<void>, failureMessage: string) => {
+    setBusy(true);
+    setActionError('');
     try {
-      saveAdminProducts(next);
-      setSaveError('');
+      await action();
+      refetch();
     } catch {
-      setSaveError('Could not save — your browser storage may be full. Try removing an image or two.');
+      setActionError(failureMessage);
+    } finally {
+      setBusy(false);
     }
   };
 
-  const save = (product: Product) => {
-    const next = products.some((p) => p.id === product.id)
-      ? products.map((p) => (p.id === product.id ? product : p))
-      : [...products, product];
-    persist(next);
+  const save = async (product: Product) => {
+    await runAction(() => upsertProduct(product), 'Product save failed. Please try again.');
     setView('list');
   };
 
   const remove = (id: string) => {
-    if (!window.confirm('Delete this product? This removes all its images too, and only affects your local draft.')) return;
-    persist(products.filter((p) => p.id !== id));
+    const product = products.find((p) => p.id === id);
+    if (!product) return;
+    if (!window.confirm(`Delete "${product.name}"? This removes all its images too.`)) return;
+    runAction(() => deleteProduct(product), 'Product deletion failed. Please try again.');
   };
 
   const toggleStatus = (id: string) => {
-    persist(
-      products.map((p) => (p.id === id ? { ...p, status: p.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' } : p))
-    );
+    const product = products.find((p) => p.id === id);
+    if (!product) return;
+    const nextStatus = product.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+    runAction(() => updateProductStatus(id, nextStatus), 'Status update failed. Please try again.');
   };
 
-  const reset = () => {
-    clearAdminProducts();
-    setProducts(PRODUCTS);
-    setSaveError('');
-    setView('list');
+  const reorder = (next: Product[]) => {
+    runAction(() => reorderProducts(next), 'Reorder failed. Please try again.');
+  };
+
+  const importLegacy = async () => {
+    if (!legacyProducts) return;
+    await runAction(async () => {
+      for (const product of legacyProducts) {
+        await upsertProduct(product);
+      }
+    }, 'Import failed. Please try again.');
+    window.localStorage.removeItem(LEGACY_LOCAL_KEY);
+    setLegacyProducts(null);
   };
 
   return (
@@ -82,40 +93,72 @@ export function AdminApp() {
         <header>
           <h1 className="font-serif text-2xl text-maroon">Product admin</h1>
           <p className="mt-2 font-sans text-sm text-earth">
-            Changes here save to this browser only. See &quot;Publish these changes&quot; below
-            to make them visible to real visitors.
+            Changes here save directly to the live catalog — visible to every visitor as soon as
+            you save, no publish step.
           </p>
         </header>
 
-        {saveError && (
+        {legacyProducts && (
+          <div className="rounded-sm border border-gold/50 bg-gold/5 px-4 py-3 font-sans text-sm text-charcoal">
+            <p>
+              Found {legacyProducts.length} product{legacyProducts.length === 1 ? '' : 's'} saved in this
+              browser from before the switch to a shared database. Import them into the live catalog?
+            </p>
+            <div className="mt-2 flex gap-4">
+              <button type="button" onClick={importLegacy} disabled={busy} className="font-medium uppercase tracking-wide text-maroon underline">
+                Import now
+              </button>
+              <button
+                type="button"
+                onClick={() => setLegacyProducts(null)}
+                className="uppercase tracking-wide text-earth underline"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        )}
+
+        {actionError && (
           <p className="rounded-sm border border-maroon/40 bg-maroon/5 px-4 py-3 font-sans text-sm text-maroon">
-            {saveError}
+            {actionError}
           </p>
         )}
 
-        {view === 'list' && (
-          <ProductList
-            products={products}
-            onEdit={setView}
-            onDelete={remove}
-            onAddNew={() => setView('new')}
-            onToggleStatus={toggleStatus}
-            onReorder={persist}
-          />
+        {loading ? (
+          <p className="font-sans text-sm text-earth">Loading products…</p>
+        ) : error ? (
+          <div>
+            <p className="font-sans text-sm text-maroon">{error}</p>
+            <button type="button" onClick={refetch} className="mt-2 font-sans text-xs uppercase tracking-wide text-maroon underline">
+              Try again
+            </button>
+          </div>
+        ) : (
+          <>
+            {view === 'list' && (
+              <ProductList
+                products={products}
+                onEdit={setView}
+                onDelete={remove}
+                onAddNew={() => setView('new')}
+                onToggleStatus={toggleStatus}
+                onReorder={reorder}
+              />
+            )}
+
+            {view === 'new' && <ProductForm onSave={save} onCancel={() => setView('list')} />}
+
+            {view !== 'list' && view !== 'new' && (
+              <ProductForm initialProduct={view} onSave={save} onCancel={() => setView('list')} />
+            )}
+          </>
         )}
-
-        {view === 'new' && <ProductForm onSave={save} onCancel={() => setView('list')} />}
-
-        {view !== 'list' && view !== 'new' && (
-          <ProductForm initialProduct={view} onSave={save} onCancel={() => setView('list')} />
-        )}
-
-        <ExportPanel products={products} onReset={reset} />
       </div>
 
       <div className="border-t border-gold/30">
         <p className="pt-8 text-center font-sans text-xs uppercase tracking-[0.2em] text-gold-dark">
-          Live preview — this browser only
+          Live preview — this is the real, public catalog
         </p>
         <ProductsSection />
       </div>
