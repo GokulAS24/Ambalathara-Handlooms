@@ -1,0 +1,181 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model SiteSettings {
+  id             String   @id @default("singleton")
+  siteName       String
+  tagline        String?
+  logoUrl        String
+  logoMarkUrl    String?
+  faviconUrl     String?
+  footerText     String
+  address        String
+  whatsappNumber String
+  updatedAt      DateTime @updatedAt
+
+  phoneNumbers PhoneNumber[]
+  emails       EmailAddress[]
+  socialLinks  SocialLink[]
+}
+
+model PhoneNumber {
+  id             String       @id @default(cuid())
+  label          String
+  number         String
+  order          Int          @default(0)
+  siteSettingsId String
+  siteSettings   SiteSettings @relation(fields: [siteSettingsId], references: [id], onDelete: Cascade)
+}
+
+model EmailAddress {
+  id             String       @id @default(cuid())
+  label          String
+  email          String
+  order          Int          @default(0)
+  siteSettingsId String
+  siteSettings   SiteSettings @relation(fields: [siteSettingsId], references: [id], onDelete: Cascade)
+}
+
+model SocialLink {
+  id             String       @id @default(cuid())
+  platform       String
+  url            String
+  order          Int          @default(0)
+  siteSettingsId String
+  siteSettings   SiteSettings @relation(fields: [siteSettingsId], references: [id], onDelete: Cascade)
+}
+
+model HeroBanner {
+  id              String    @id @default(cuid())
+  title           String
+  subtitle        String?
+  desktopImageUrl String
+  mobileImageUrl  String?
+  ctaLabel        String?
+  categoryId      String?
+  category        Category? @relation(fields: [categoryId], references: [id])
+  discountText    String?
+  order           Int       @default(0)
+  isActive        Boolean   @default(true)
+  startsAt        DateTime?
+  endsAt          DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model PromoBlock {
+  id        String   @id @default(cuid())
+  title     String
+  subtitle  String?
+  imageUrl  String
+  linkHref  String
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Page {
+  id        String        @id @default(cuid())
+  slug      String        @unique
+  title     String
+  sections  PageSection[]
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+}
+
+model PageSection {
+  id       String  @id @default(cuid())
+  pageId   String
+  page     Page    @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  type     String
+  heading  String?
+  body     String?
+  imageUrl String?
+  order    Int     @default(0)
+}
+
+model Category {
+  id          String     @id @default(cuid())
+  name        String
+  slug        String     @unique
+  description String?
+  imageUrl    String?
+  order       Int        @default(0)
+  isActive    Boolean    @default(true)
+  parentId    String?
+  parent      Category?    @relation("CategoryTree", fields: [parentId], references: [id])
+  children    Category[]   @relation("CategoryTree")
+  products    Product[]
+  heroBanners HeroBanner[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Product {
+  id             String          @id @default(cuid())
+  name           String
+  slug           String          @unique
+  description    String
+  price          Float
+  compareAtPrice Float?
+  stock          Int             @default(0)
+  weaveType      String?
+  fabric         String?
+  pattern        String?
+  washCare       String?
+  avgRating      Float           @default(0)
+  reviewCount    Int             @default(0)
+  categoryId     String
+  category       Category        @relation(fields: [categoryId], references: [id])
+  images         ProductImage[]
+  specs          ProductSpec[]
+  reviews        ProductReview[]
+  isActive       Boolean         @default(true)
+  isFeatured     Boolean         @default(false)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  altText   String?
+  order     Int     @default(0)
+}
+
+model ProductSpec {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  label     String
+  value     String
+  order     Int     @default(0)
+}
+
+model ProductReview {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  author    String
+  rating    Int
+  comment   String
+  createdAt DateTime @default(now())
+}

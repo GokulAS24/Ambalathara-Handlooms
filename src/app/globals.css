@@ -1,0 +1,90 @@
+@import "tailwindcss";
+
+@theme {
+  --color-terracotta-50: #fbf0eb;
+  --color-terracotta-100: #f5ddd1;
+  --color-terracotta-200: #eab8a3;
+  --color-terracotta-300: #de9375;
+  --color-terracotta-400: #d26e48;
+  --color-terracotta-500: #c1502e;
+  --color-terracotta-600: #9b4025;
+  --color-terracotta-700: #75301c;
+  --color-terracotta-800: #4e2013;
+  --color-terracotta-900: #28100a;
+
+  --color-clay-50: #f4ede7;
+  --color-clay-100: #e5d3c3;
+  --color-clay-200: #cba98e;
+  --color-clay-300: #b27f5a;
+  --color-clay-400: #8b5e3c;
+  --color-clay-500: #6f4a2f;
+  --color-clay-600: #5a3b26;
+  --color-clay-700: #442c1d;
+  --color-clay-800: #2f1e13;
+  --color-clay-900: #190f0a;
+
+  --color-sand-50: #fefcfa;
+  --color-sand-100: #fbf7f0;
+  --color-sand-200: #f5ede0;
+  --color-sand-300: #eee1cc;
+  --color-sand-400: #e8dcc8;
+  --color-sand-500: #d9c7a8;
+  --color-sand-600: #bfa97d;
+
+  --color-indigo-dye-400: #3a5a78;
+  --color-indigo-dye-500: #2c3e50;
+  --color-indigo-dye-600: #1f3a5f;
+  --color-indigo-dye-700: #17293f;
+  --color-indigo-dye-800: #0f1b29;
+
+  --color-madder-400: #b15252;
+  --color-madder-500: #9e3d3d;
+  --color-madder-600: #7e2f2f;
+
+  --color-turmeric-400: #e0b12e;
+  --color-turmeric-500: #d4a017;
+  --color-turmeric-600: #ab7f12;
+
+  --color-brand-50: #f5ede4;
+  --color-brand-100: #e8d4bd;
+  --color-brand-200: #d3b08a;
+  --color-brand-300: #bc8b5c;
+  --color-brand-400: #a06b3e;
+  --color-brand-500: #7c4a26;
+  --color-brand-600: #613a1e;
+  --color-brand-700: #4a2c17;
+  --color-brand-800: #331d0f;
+  --color-brand-900: #1d1008;
+
+  --font-serif: var(--font-playfair), serif;
+  --font-sans: var(--font-inter), sans-serif;
+}
+
+body {
+  @apply bg-sand-50 text-clay-800 font-sans antialiased;
+}
+
+::selection {
+  @apply bg-brand-200 text-clay-900;
+}
+
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+.lenis.lenis-scrolling iframe {
+  pointer-events: none;
+}
