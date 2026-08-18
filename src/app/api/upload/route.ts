@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { auth } from "@/auth";
-import { supabaseAdmin, UPLOADS_BUCKET } from "@/lib/supabase";
+import { getSupabaseAdmin, UPLOADS_BUCKET } from "@/lib/supabase";
 
 const ALLOWED_TYPES: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
 
   const filename = `${randomUUID()}.${extension}`;
   const bytes = Buffer.from(await file.arrayBuffer());
+  const supabaseAdmin = getSupabaseAdmin();
 
   const { error } = await supabaseAdmin.storage
     .from(UPLOADS_BUCKET)
